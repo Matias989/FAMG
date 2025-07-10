@@ -6,23 +6,11 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom']
-          // Removemos firebase de manualChunks
-        }
-      }
-    }
+    sourcemap: false
   },
   server: {
     port: 3000,
     open: true
   },
-  publicDir: 'public',
-  optimizeDeps: {
-    include: ['firebase']
-  }
+  publicDir: 'public'
 }) 
