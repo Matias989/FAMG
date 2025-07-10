@@ -1,0 +1,242 @@
+{
+  "templates": [
+    {
+      "id": "dungeon-5",
+      "name": "Dungeon 5 Jugadores",
+      "description": "Grupo estándar para dungeons de 5 jugadores",
+      "category": "PvE",
+      "maxMembers": 5,
+      "roles": [
+        {
+          "id": "tank",
+          "name": "Tanque",
+          "description": "Protege al grupo y mantiene el aggro",
+          "required": 1,
+          "max": 1,
+          "icon": "🛡️",
+          "skills": ["Protección", "Control de aggro", "Supervivencia"]
+        },
+        {
+          "id": "healer",
+          "name": "Sanador",
+          "description": "Mantiene al grupo con vida",
+          "required": 1,
+          "max": 1,
+          "icon": "💚",
+          "skills": ["Curación", "Purificación", "Buffs de vida"]
+        },
+        {
+          "id": "dps-melee",
+          "name": "DPS Melee",
+          "description": "Daño cuerpo a cuerpo",
+          "required": 1,
+          "max": 2,
+          "icon": "⚔️",
+          "skills": ["Daño físico", "Movilidad", "Control"]
+        },
+        {
+          "id": "dps-ranged",
+          "name": "DPS Ranged",
+          "description": "Daño a distancia",
+          "required": 1,
+          "max": 2,
+          "icon": "🏹",
+          "skills": ["Daño mágico", "Control de distancia", "Buffs"]
+        }
+      ]
+    },
+    {
+      "id": "dungeon-10",
+      "name": "Dungeon 10 Jugadores",
+      "description": "Grupo para dungeons grandes de 10 jugadores",
+      "category": "PvE",
+      "maxMembers": 10,
+      "roles": [
+        {
+          "id": "main-tank",
+          "name": "Tanque Principal",
+          "description": "Tanque principal del grupo",
+          "required": 1,
+          "max": 1,
+          "icon": "🛡️",
+          "skills": ["Protección", "Control de aggro", "Supervivencia"]
+        },
+        {
+          "id": "off-tank",
+          "name": "Tanque Secundario",
+          "description": "Tanque secundario para adds",
+          "required": 1,
+          "max": 1,
+          "icon": "🛡️",
+          "skills": ["Protección", "Control de adds", "Supervivencia"]
+        },
+        {
+          "id": "main-healer",
+          "name": "Sanador Principal",
+          "description": "Sanador principal del grupo",
+          "required": 1,
+          "max": 1,
+          "icon": "💚",
+          "skills": ["Curación masiva", "Purificación", "Buffs de vida"]
+        },
+        {
+          "id": "off-healer",
+          "name": "Sanador Secundario",
+          "description": "Sanador secundario",
+          "required": 1,
+          "max": 1,
+          "icon": "💚",
+          "skills": ["Curación", "Purificación", "Buffs"]
+        },
+        {
+          "id": "dps-melee",
+          "name": "DPS Melee",
+          "description": "Daño cuerpo a cuerpo",
+          "required": 2,
+          "max": 4,
+          "icon": "⚔️",
+          "skills": ["Daño físico", "Movilidad", "Control"]
+        },
+        {
+          "id": "dps-ranged",
+          "name": "DPS Ranged",
+          "description": "Daño a distancia",
+          "required": 2,
+          "max": 4,
+          "icon": "🏹",
+          "skills": ["Daño mágico", "Control de distancia", "Buffs"]
+        }
+      ]
+    },
+    {
+      "id": "gvg-20",
+      "name": "GvG 20 Jugadores",
+      "description": "Guerra de gremios estándar",
+      "category": "PvP",
+      "maxMembers": 20,
+      "roles": [
+        {
+          "id": "tank",
+          "name": "Tanque",
+          "description": "Protege y controla el campo de batalla",
+          "required": 3,
+          "max": 5,
+          "icon": "🛡️",
+          "skills": ["Protección", "Control de área", "Supervivencia"]
+        },
+        {
+          "id": "healer",
+          "name": "Sanador",
+          "description": "Mantiene al grupo con vida",
+          "required": 4,
+          "max": 6,
+          "icon": "💚",
+          "skills": ["Curación", "Purificación", "Buffs"]
+        },
+        {
+          "id": "dps-melee",
+          "name": "DPS Melee",
+          "description": "Daño cuerpo a cuerpo",
+          "required": 6,
+          "max": 8,
+          "icon": "⚔️",
+          "skills": ["Daño físico", "Movilidad", "Control"]
+        },
+        {
+          "id": "dps-ranged",
+          "name": "DPS Ranged",
+          "description": "Daño a distancia",
+          "required": 4,
+          "max": 6,
+          "icon": "🏹",
+          "skills": ["Daño mágico", "Control de distancia", "Buffs"]
+        },
+        {
+          "id": "support",
+          "name": "Soporte",
+          "description": "Buffs y control de utilidad",
+          "required": 3,
+          "max": 5,
+          "icon": "🔮",
+          "skills": ["Buffs", "Debuffs", "Control"]
+        }
+      ]
+    },
+    {
+      "id": "hce-5",
+      "name": "HCE 5 Jugadores",
+      "description": "Hardcore Expeditions",
+      "category": "PvE",
+      "maxMembers": 5,
+      "roles": [
+        {
+          "id": "tank",
+          "name": "Tanque",
+          "description": "Tanque especializado para HCE",
+          "required": 1,
+          "max": 1,
+          "icon": "🛡️",
+          "skills": ["Protección", "Control de aggro", "Supervivencia"]
+        },
+        {
+          "id": "healer",
+          "name": "Sanador",
+          "description": "Sanador especializado para HCE",
+          "required": 1,
+          "max": 1,
+          "icon": "💚",
+          "skills": ["Curación", "Purificación", "Buffs de vida"]
+        },
+        {
+          "id": "dps",
+          "name": "DPS",
+          "description": "Daño optimizado para HCE",
+          "required": 3,
+          "max": 3,
+          "icon": "⚔️",
+          "skills": ["Daño máximo", "Movilidad", "Control"]
+        }
+      ]
+    },
+    {
+      "id": "custom",
+      "name": "Plantilla Personalizada",
+      "description": "Crea tu propia plantilla",
+      "category": "Custom",
+      "maxMembers": 50,
+      "roles": []
+    }
+  ],
+  "categories": [
+    {
+      "id": "pve",
+      "name": "PvE",
+      "description": "Contenido contra el entorno",
+      "icon": "🐉"
+    },
+    {
+      "id": "pvp",
+      "name": "PvP",
+      "description": "Contenido contra jugadores",
+      "icon": "⚔️"
+    },
+    {
+      "id": "gathering",
+      "name": "Recolección",
+      "description": "Actividades de recolección",
+      "icon": "🌿"
+    },
+    {
+      "id": "crafting",
+      "name": "Crafting",
+      "description": "Actividades de crafteo",
+      "icon": "🔨"
+    },
+    {
+      "id": "custom",
+      "name": "Personalizado",
+      "description": "Plantillas personalizadas",
+      "icon": "⚙️"
+    }
+  ]
+} 

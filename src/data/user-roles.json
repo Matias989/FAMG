@@ -1,0 +1,71 @@
+{
+  "combat_roles": [
+    {
+      "name": "Tanque",
+      "weapons": [
+        "Espada y Escudo",
+        "Martillo",
+        "Maza",
+        "Bastón de Cuartos",
+        "Espada de Fuego",
+        "Martillo de Guerra"
+      ]
+    },
+    {
+      "name": "Sanador",
+      "weapons": [
+        "Bastón Sagrado",
+        "Bastón de Naturaleza",
+        "Bastón Arcano",
+        "Bastón de Hielo",
+        "Bastón de Fuego",
+        "Bastón de Luz"
+      ]
+    },
+    {
+      "name": "DPS Melee",
+      "weapons": [
+        "Espada",
+        "Daga",
+        "Lanza",
+        "Hacha",
+        "Espada de Fuego",
+        "Daga de Hielo",
+        "Lanza de Guerra"
+      ]
+    },
+    {
+      "name": "DPS Ranged",
+      "weapons": [
+        "Arco",
+        "Ballesta",
+        "Bastón de Fuego",
+        "Bastón de Hielo",
+        "Bastón Arcano",
+        "Arco de Guerra"
+      ]
+    },
+    {
+      "name": "Soporte",
+      "weapons": [
+        "Bastón Arcano",
+        "Bastón de Naturaleza",
+        "Bastón Sagrado",
+        "Bastón de Hielo",
+        "Bastón de Fuego",
+        "Bastón de Luz"
+      ]
+    }
+  ],
+  "gathering_types": [
+    "Mineral",
+    "Madera",
+    "Fibra",
+    "Piedra",
+    "Piel",
+    "Pescado"
+  ],
+  "tiers": [
+    "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"
+  ]
+} 
