@@ -15,29 +15,29 @@ export const useGroupsSocket = () => {
     fetch(`${API_URL}/groups`)
       .then(res => res.json())
       .then(data => {
-        console.log('FETCH inicial grupos:', data);
         setGroups(data);
       });
 
-    const socket = io(SOCKET_URL);
+    // Conexión socket con configuración recomendada para Render
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
+    });
 
     socket.on('groups_init', (groups) => {
-      console.log('SOCKET groups_init:', groups);
       setGroups(groups);
     });
     socket.on('group_updated', (data) => {
       const group = data.group || data; // Soporta ambos formatos
-      console.log('SOCKET group_updated:', group);
       updateGroup(group);
     });
     socket.on('group_created', (data) => {
       const group = data.group || data;
-      console.log('SOCKET group_created:', group);
       updateGroup(group);
     });
     socket.on('group_deleted', (data) => {
       const groupId = data.groupId || data;
-      console.log('SOCKET group_deleted:', groupId);
       removeGroup(groupId);
     });
 
