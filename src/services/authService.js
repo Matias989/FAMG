@@ -5,12 +5,9 @@ export const authService = {
   async register(userData) {
     try {
       const response = await api.post('/auth/register', userData);
-      
-      // Guardar solo el token en localStorage
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
       }
-      
       return response.data;
     } catch (error) {
       console.error('Error en registro:', error);
@@ -22,12 +19,9 @@ export const authService = {
   async login(albionNick, password) {
     try {
       const response = await api.post('/auth/login', { albionNick, password });
-      
-      // Guardar solo el token en localStorage
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
       }
-      
       return response.data;
     } catch (error) {
       console.error('Error en login:', error);
@@ -50,7 +44,7 @@ export const authService = {
     return !!this.getToken();
   },
 
-  // Obtener perfil del usuario
+  // Obtener perfil del usuario (del backend)
   async getProfile() {
     try {
       const response = await api.get('/auth/profile');
@@ -58,6 +52,15 @@ export const authService = {
     } catch (error) {
       console.error('Error al obtener perfil:', error);
       throw error;
+    }
+  },
+
+  // Obtener usuario actual (compatibilidad)
+  async getCurrentUser() {
+    try {
+      return await this.getProfile();
+    } catch (error) {
+      return null;
     }
   },
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../../contexts/AuthContext'
 import { useNotification } from '../../contexts/NotificationContext'
 import { groupsService } from '../../services/groupsService'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Users, 
@@ -34,7 +34,26 @@ const Dashboard = () => {
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState(null) // Agregado el estado faltante
   const { forceShowNotification } = useGroupCompletion(groups, user);
+
+  // Plantillas dinámicas
+  const [templates, setTemplates] = useState([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [errorTemplates, setErrorTemplates] = useState(null)
+
+  useEffect(() => {
+    setLoadingTemplates(true)
+    groupsService.getTemplates()
+      .then(data => {
+        setTemplates(data)
+        setLoadingTemplates(false)
+      })
+      .catch(() => {
+        setErrorTemplates('Error al cargar plantillas')
+        setLoadingTemplates(false)
+      })
+  }, [])
 
   // Buscar grupo activo del usuario
   React.useEffect(() => {
@@ -76,15 +95,15 @@ const Dashboard = () => {
 
   // Función para unirse al primer grupo disponible según criterios
   const handleAutoJoin = async () => {
-    if (!selectedActivity || !selectedRole) {
-      showNotification('Selecciona una actividad y un rol', 'error')
+    if (!selectedTemplate || !selectedRole) {
+      showNotification('Selecciona una plantilla y un rol', 'error')
       return
     }
     
-    const available = findGroupsByActivityAndRole(selectedActivity, selectedRole)
+    const available = findGroupsByActivityAndRole(selectedTemplate.type, selectedRole)
     
     if (available.length === 0) {
-      showNotification(`No hay grupos de ${selectedActivity} con slots de ${selectedRole} disponibles`, 'info')
+      showNotification(`No hay grupos de ${selectedTemplate.type} con slots de ${selectedRole} disponibles`, 'info')
       return
     }
     
@@ -109,7 +128,7 @@ const Dashboard = () => {
           forceShowNotification(updatedGroup);
         }
         setShowJoinModal(false)
-        setSelectedActivity('')
+        setSelectedTemplate(null)
         setSelectedRole('')
         navigate('/groups') // Redirigir a la página de grupos
       } catch (error) {
@@ -123,80 +142,40 @@ const Dashboard = () => {
     }
   }
 
-  // Plantillas reales (debería estar en un archivo común, pero la traemos aquí para el flujo automático)
-  const templates = [
-    {
-      id: 1,
-      name: 'Dungeon 5v5',
-      type: 'Dungeon',
-      maxMembers: 5,
-      roles: ['Tanque', 'Sanador', 'DPS', 'DPS', 'DPS']
-    },
-    {
-      id: 2,
-      name: 'GvG 5v5',
-      type: 'GvG',
-      maxMembers: 5,
-      roles: ['Tanque', 'Sanador', 'DPS', 'DPS', 'DPS']
-    },
-    {
-      id: 3,
-      name: 'HCE 5v5',
-      type: 'HCE',
-      maxMembers: 5,
-      roles: ['Tanque', 'Sanador', 'DPS', 'DPS', 'DPS']
-    },
-    {
-      id: 4,
-      name: 'ZvZ Masivo',
-      type: 'ZvZ',
-      maxMembers: 20,
-      roles: ['Tanque', 'Sanador', 'DPS', 'Soporte']
-    },
-    {
-      id: 5,
-      name: 'Gathering Group',
-      type: 'Gathering',
-      maxMembers: 10,
-      roles: ['Recolector']
-    }
-  ];
-
   // Función para crear grupo automáticamente
   const handleAutoCreateGroup = async () => {
-    if (!selectedActivity || !selectedRole) {
-      showNotification('Selecciona una actividad y un rol', 'error')
+    if (!selectedTemplate || !selectedRole) {
+      showNotification('Selecciona una plantilla y un rol', 'error')
       return
     }
-    // Buscar plantilla real de la actividad
-    const template = templates.find(t => t.type === selectedActivity) || {
-      name: `${selectedActivity} Auto`,
-      type: selectedActivity,
-      roles: [selectedRole],
-    };
-    // Nombre automático
-    const groupName = `${user.albionNick} ${selectedActivity}`;
-    // Crear slots según plantilla, asignando al usuario solo al primer slot disponible del rol seleccionado
+    
+    const groupName = `${user.albionNick} ${selectedTemplate.name}`;
     let assigned = false;
-    const slots = template.roles.map((role) => {
-      if (!assigned && role === selectedRole) {
+    const slots = (selectedTemplate.roles || []).map((role) => {
+      const roleName = role.name || role;
+      if (!assigned && roleName === selectedRole) {
         assigned = true;
-        return { role, user: { albionNick: user.albionNick, username: user.albionNick } };
+        return { role: roleName, user: { albionNick: user.albionNick, username: user.albionNick } };
       }
-      return { role, user: null };
+      return { role: roleName, user: null };
     });
+
+    // Asegura que el campo type nunca sea undefined
+    const groupType = selectedTemplate.type || selectedTemplate.category || selectedTemplate.name;
+
     const newGroup = {
       name: groupName,
-      template: template,
-      type: selectedActivity,
+      template: selectedTemplate,
+      type: groupType,
       slots,
       creatorNick: user.albionNick,
     };
+    
     try {
       await groupsService.createGroup(newGroup);
       showNotification('Grupo creado exitosamente', 'success');
       setShowJoinModal(false);
-      setSelectedActivity('');
+      setSelectedTemplate(null);
       setSelectedRole('');
       // No recargar grupos, el socket lo hará
       navigate('/groups'); // Navegar a la página de grupos
@@ -206,16 +185,6 @@ const Dashboard = () => {
   };
 
   // Opciones para el modal
-  const activityTypes = [
-    { value: 'Dungeon', label: 'Dungeon', icon: '🏰', description: 'Explora mazmorras y obtén tesoros' },
-    { value: 'GvG', label: 'GvG', icon: '⚔️', description: 'Batallas épicas entre gremios' },
-    { value: 'HCE', label: 'HCE', icon: '🔥', description: 'Hardcore Expeditions de élite' },
-    { value: 'ZvZ', label: 'ZvZ', icon: '👥', description: 'Guerras masivas de territorios' },
-    { value: 'Gathering', label: 'Gathering', icon: '🌿', description: 'Recolección de recursos' },
-    { value: 'Crafting', label: 'Crafting', icon: '🔨', description: 'Creación de objetos' },
-    { value: 'PvP', label: 'PvP', icon: '⚡', description: 'Combate jugador vs jugador' }
-  ]
-
   const roleTypes = [
     { value: 'Tanque', label: 'Tanque', icon: '🛡️', description: 'Protege al grupo' },
     { value: 'Sanador', label: 'Sanador', icon: '💚', description: 'Mantén vivos a tus aliados' },
@@ -315,7 +284,7 @@ const Dashboard = () => {
               <button
                 onClick={() => {
                   setShowJoinModal(false)
-                  setSelectedActivity('')
+                  setSelectedTemplate(null)
                   setSelectedRole('')
                 }}
                 className="text-gray-400 hover:text-white transition-colors"
@@ -326,68 +295,114 @@ const Dashboard = () => {
 
             {/* Content */}
             <div className="p-6 space-y-8">
-              {/* Tipo de Actividad */}
+              {/* Plantillas disponibles */}
               <div>
                 <label className="block text-lg font-medium text-white mb-4">
-                   ¿Qué tipo de aventura quieres vivir?
+                  ¿Qué tipo de aventura quieres vivir?
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {activityTypes.map((activity) => (
+                {loadingTemplates ? (
+                  <div className="text-center py-8 text-gray-400">Cargando plantillas...</div>
+                ) : errorTemplates ? (
+                  <div className="text-center py-8 text-red-400">{errorTemplates}</div>
+                ) : templates.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h3 className="text-xl font-semibold mb-2">No hay plantillas creadas</h3>
+                    <p className="text-gray-400 mb-4">Crea tu primera plantilla para comenzar a organizar aventuras</p>
                     <button
-                      key={activity.value}
-                      onClick={() => setSelectedActivity(activity.value)}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        selectedActivity === activity.value
-                          ? 'border-green-500 bg-green-500/10 text-green-400'
-                          : 'border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white'
-                      }`}
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setShowJoinModal(false)
+                        // Redirigir a la página de plantillas o abrir el modal de crear plantilla
+                        window.location.href = '/templates'
+                      }}
                     >
-                      <div className="text-3xl mb-2">{activity.icon}</div>
-                      <div className="font-semibold mb-1">{activity.label}</div>
-                      <div className="text-xs opacity-75">{activity.description}</div>
+                      Crear Plantilla
                     </button>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {templates.map((template) => (
+                      <button
+                        key={template.id || template._id}
+                        onClick={() => {
+                          setSelectedTemplate(template)
+                          setSelectedRole('')
+                        }}
+                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                          selectedTemplate && (selectedTemplate.id || selectedTemplate._id) === (template.id || template._id)
+                            ? 'border-green-500 bg-green-500/10 text-green-400'
+                            : 'border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white'
+                        }`}
+                      >
+                        <div className="text-3xl mb-2">{template.icon}</div>
+                        <div className="font-semibold mb-1">{template.name}</div>
+                        <div className="text-xs opacity-75">{template.category}</div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {template.roles && template.roles.map((role, idx) => (
+                            <span key={idx} className="inline-flex items-center gap-1 text-xs bg-dark-700/50 rounded px-2 py-1">
+                              <span>{role.icon}</span>
+                              {role.name}
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Rol */}
-              <div>
-                <label className="block text-lg font-medium text-white mb-4">
-                  ⚔️ ¿Con qué rol quieres luchar?
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {roleTypes.map((role) => (
-                    <button
-                      key={role.value}
-                      onClick={() => setSelectedRole(role.value)}
-                      className={`p-4 rounded-lg border-2 transition-all text-center ${
-                        selectedRole === role.value
-                          ? 'border-green-500 bg-green-500/10 text-green-400'
-                          : 'border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white'
-                      }`}
-                    >
-                      <div className="text-3xl mb-2">{role.icon}</div>
-                      <div className="font-semibold mb-1">{role.label}</div>
-                      <div className="text-xs opacity-75">{role.description}</div>
-                    </button>
-                  ))}
+              {selectedTemplate && (
+                <div>
+                  <label className="block text-lg font-medium text-white mb-4">
+                    ⚔️ ¿Con qué rol quieres luchar?
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {Array.from(new Set((selectedTemplate.roles || []).map(r => r.name))).map((roleName) => {
+                      const roleIcon = (selectedTemplate.roles.find(r => r.name === roleName) || {}).icon || '';
+                      return (
+                        <button
+                          key={roleName}
+                          onClick={() => setSelectedRole(roleName)}
+                          className={`p-4 rounded-lg border-2 transition-all text-center ${
+                            selectedRole === roleName
+                              ? 'border-green-500 bg-green-500/10 text-green-400'
+                              : 'border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white'
+                          }`}
+                        >
+                          <div className="text-3xl mb-2">{roleIcon}</div>
+                          <div className="font-semibold mb-1">{roleName}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Información de grupos disponibles */}
-              {selectedActivity && selectedRole && (
+              {selectedTemplate && selectedRole && (
                 <div className="bg-gradient-to-r from-green-600/20 to-blue-600/20 border border-green-500/30 rounded-lg p-6">
                   <div className="text-center">
                     <div className="text-2xl mb-2">🎯</div>
                     <div className="text-lg font-semibold text-white mb-2">
-                      {findGroupsByActivityAndRole(selectedActivity, selectedRole).length > 0
-                        ? `¡Perfecto! Encontramos ${findGroupsByActivityAndRole(selectedActivity, selectedRole).length} grupos disponibles`
-                        : `No hay grupos de ${selectedActivity} con slots de ${selectedRole} disponibles`}
+                      {findGroupsByActivityAndRole(
+                        selectedTemplate.type || selectedTemplate.category || selectedTemplate.name,
+                        selectedRole
+                      ).length > 0
+                        ? `¡Perfecto! Encontramos ${findGroupsByActivityAndRole(
+                            selectedTemplate.type || selectedTemplate.category || selectedTemplate.name,
+                            selectedRole
+                          ).length} grupos disponibles`
+                        : `No hay grupos de ${selectedTemplate.type || selectedTemplate.category || selectedTemplate.name} con slots de ${selectedRole} disponibles`}
                     </div>
                     <div className="text-gray-300">
-                      Grupos de <strong>{selectedActivity}</strong> con slots de <strong>{selectedRole}</strong>
+                      Grupos de <strong>{selectedTemplate.type || selectedTemplate.category || selectedTemplate.name}</strong> con slots de <strong>{selectedRole}</strong>
                     </div>
-                    {findGroupsByActivityAndRole(selectedActivity, selectedRole).length > 0 ? (
+                    {findGroupsByActivityAndRole(
+                      selectedTemplate.type || selectedTemplate.category || selectedTemplate.name,
+                      selectedRole
+                    ).length > 0 ? (
                       <button
                         onClick={handleAutoJoin}
                         className="mt-4 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all"
@@ -399,7 +414,7 @@ const Dashboard = () => {
                         onClick={handleAutoCreateGroup}
                         className="mt-4 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-semibold transition-all"
                       >
-                        Crear Grupo de {selectedActivity} como {selectedRole}
+                        Crear Grupo de {selectedTemplate.type || selectedTemplate.category || selectedTemplate.name} como {selectedRole}
                       </button>
                     )}
                   </div>
@@ -412,7 +427,7 @@ const Dashboard = () => {
               <button
                 onClick={() => {
                   setShowJoinModal(false)
-                  setSelectedActivity('')
+                  setSelectedTemplate(null)
                   setSelectedRole('')
                 }}
                 className="px-4 py-2 text-gray-400 hover:text-white transition-colors"

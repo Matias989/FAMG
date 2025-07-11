@@ -11,6 +11,8 @@ import {
   ArrowRight,
   Star
 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { groupsService } from '../services/groupsService'
 
 const Home = () => {
   const { user } = useAuth()
@@ -42,26 +44,22 @@ const Home = () => {
     }
   ]
 
-  const templates = [
-    {
-      name: 'Dungeon 5 Jugadores',
-      category: 'PvE',
-      roles: ['Tanque', 'Sanador', 'DPS'],
-      icon: '🛡️'
-    },
-    {
-      name: 'GvG 20 Jugadores',
-      category: 'PvP',
-      roles: ['Tanque', 'Sanador', 'DPS', 'Soporte'],
-      icon: '⚔️'
-    },
-    {
-      name: 'HCE 5 Jugadores',
-      category: 'PvE',
-      roles: ['Tanque', 'Sanador', 'DPS'],
-      icon: '🔥'
-    }
-  ]
+  const [templates, setTemplates] = useState([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [errorTemplates, setErrorTemplates] = useState(null)
+
+  useEffect(() => {
+    setLoadingTemplates(true)
+    groupsService.getTemplates()
+      .then(data => {
+        setTemplates(data)
+        setLoadingTemplates(false)
+      })
+      .catch(() => {
+        setErrorTemplates('Error al cargar plantillas')
+        setLoadingTemplates(false)
+      })
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -134,33 +132,45 @@ const Home = () => {
           <h2 className="text-4xl font-bold text-center mb-16">
             Plantillas de Grupos
           </h2>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {templates.map((template, index) => (
-              <div key={index} className="card group hover:scale-105">
-                <div className="text-4xl mb-4">{template.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{template.name}</h3>
-                <p className="text-dark-300 mb-4">{template.category}</p>
-                <div className="flex flex-wrap gap-2">
-                  {template.roles.map((role, roleIndex) => (
-                    <span
-                      key={roleIndex}
-                      className="px-3 py-1 bg-dark-700/50 rounded-full text-sm text-dark-300"
-                    >
-                      {role}
-                    </span>
-                  ))}
-                </div>
+          {loadingTemplates ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">⚔️</div>
+              <h3 className="text-2xl font-bold mb-2">Cargando plantillas...</h3>
+            </div>
+          ) : errorTemplates ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">❌</div>
+              <h3 className="text-2xl font-bold mb-2">{errorTemplates}</h3>
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-3 gap-8">
+                {templates.slice(0, 3).map((template, index) => (
+                  <div key={index} className="card group hover:scale-105">
+                    <div className="text-4xl mb-4">{template.icon}</div>
+                    <h3 className="text-xl font-semibold mb-2">{template.name}</h3>
+                    <p className="text-dark-300 mb-4">{template.category}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {template.roles && template.roles.map((role, roleIndex) => (
+                        <span
+                          key={roleIndex}
+                          className="px-3 py-1 bg-dark-700/50 rounded-full text-sm text-dark-300"
+                        >
+                          {role.name || role}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <div className="text-center mt-12">
-            <Link to="/templates" className="btn btn-primary">
-              Ver Todas las Plantillas
-              <ArrowRight size={20} />
-            </Link>
-          </div>
+              <div className="text-center mt-12">
+                <Link to="/templates" className="btn btn-primary">
+                  Ver Todas las Plantillas
+                  <ArrowRight size={20} />
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 

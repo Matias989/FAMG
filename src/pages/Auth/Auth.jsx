@@ -17,13 +17,18 @@ const Auth = ({ onAuthSuccess }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const user = authService.getCurrentUser();
+      // Solo intenta obtener el usuario si hay token
+      if (!authService.getToken()) {
+        setLoading(false);
+        return;
+      }
+      const user = await authService.getCurrentUser();
       if (user) {
         // Verificar si el token es válido
         const isValid = await authService.verifyToken();
         if (isValid) {
           setCurrentUser(user);
-          
+
           // Si el perfil no está completo, mostrar formulario de completar perfil
           if (!user.profileCompleted) {
             setCurrentView('complete-profile');
@@ -57,9 +62,9 @@ const Auth = ({ onAuthSuccess }) => {
     }
   };
 
-  const handleProfileComplete = () => {
+  const handleProfileComplete = async () => {
     // Recargar usuario actualizado
-    const updatedUser = authService.getCurrentUser();
+    const updatedUser = await authService.getCurrentUser();
     setCurrentUser(updatedUser);
     onAuthSuccess(updatedUser);
   };

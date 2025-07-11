@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
+import { groupsService } from '../services/groupsService';
 
 const CreateEvent = ({ onClose, onCreateEvent }) => {
   const [formData, setFormData] = useState({
@@ -13,44 +14,22 @@ const CreateEvent = ({ onClose, onCreateEvent }) => {
     template: null
   });
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [errorTemplates, setErrorTemplates] = useState(null);
 
-  const templates = [
-    {
-      id: 1,
-      name: 'Dungeon 5v5',
-      type: 'Dungeon',
-      maxMembers: 5,
-      roles: ['Tanque', 'Sanador', 'DPS', 'DPS', 'DPS']
-    },
-    {
-      id: 2,
-      name: 'GvG 5v5',
-      type: 'GvG',
-      maxMembers: 5,
-      roles: ['Tanque', 'Sanador', 'DPS', 'DPS', 'DPS']
-    },
-    {
-      id: 3,
-      name: 'HCE 5v5',
-      type: 'HCE',
-      maxMembers: 5,
-      roles: ['Tanque', 'Sanador', 'DPS', 'DPS', 'DPS']
-    },
-    {
-      id: 4,
-      name: 'ZvZ Masivo',
-      type: 'ZvZ',
-      maxMembers: 20,
-      roles: ['Tanque', 'Sanador', 'DPS', 'Soporte']
-    },
-    {
-      id: 5,
-      name: 'Gathering Group',
-      type: 'Gathering',
-      maxMembers: 10,
-      roles: ['Recolector']
-    }
-  ];
+  useEffect(() => {
+    setLoadingTemplates(true);
+    groupsService.getTemplates()
+      .then(data => {
+        setTemplates(data);
+        setLoadingTemplates(false);
+      })
+      .catch(() => {
+        setErrorTemplates('Error al cargar plantillas');
+        setLoadingTemplates(false);
+      });
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -126,15 +105,21 @@ const CreateEvent = ({ onClose, onCreateEvent }) => {
             </button>
             {showTemplateSelector && (
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-2 max-h-60 overflow-y-auto">
-                {templates.map(template => (
-                  <div
-                    key={template.id}
-                    className="p-2 hover:bg-gray-700 rounded cursor-pointer"
-                    onClick={() => handleTemplateSelect(template)}
-                  >
-                    {template.name}
-                  </div>
-                ))}
+                {loadingTemplates ? (
+                  <div className="text-center py-2 text-gray-400">Cargando plantillas...</div>
+                ) : errorTemplates ? (
+                  <div className="text-center py-2 text-red-400">{errorTemplates}</div>
+                ) : (
+                  templates.map(template => (
+                    <div
+                      key={template.id}
+                      className="p-2 hover:bg-gray-700 rounded cursor-pointer"
+                      onClick={() => handleTemplateSelect(template)}
+                    >
+                      {template.name}
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
