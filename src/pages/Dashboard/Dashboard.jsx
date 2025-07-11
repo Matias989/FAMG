@@ -1,7 +1,8 @@
+import React from 'react';
 import { useAuth } from '../../contexts/AuthContext'
 import { useNotification } from '../../contexts/NotificationContext'
 import { groupsService } from '../../services/groupsService'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Users, 
@@ -19,40 +20,32 @@ import {
 } from 'lucide-react'
 import ActivityTypeInfo from '../../components/ActivityTypeInfo'
 import useGroupCompletion from '../../hooks/useGroupCompletion';
+import { useGroupsStore } from '../../store/useGroupsStore';
+import { useGroupsSocket } from '../../hooks/useGroupsSocket';
 
 const Dashboard = () => {
+  useGroupsSocket(); // Ahora el socket está activo en todo el Dashboard
+
   const { user } = useAuth()
   const { showNotification } = useNotification()
   const navigate = useNavigate()
-  const [groups, setGroups] = useState([])
+  const groups = useGroupsStore(state => state.groups)
   const [userActiveGroup, setUserActiveGroup] = useState(null)
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
   const { forceShowNotification } = useGroupCompletion(groups, user);
 
-  // Cargar grupos al montar el componente
-  useEffect(() => {
-    loadGroups()
-  }, [])
-
-  const loadGroups = async () => {
-    try {
-      const groupsData = await groupsService.getGroups()
-      setGroups(groupsData)
-      
-      // Buscar grupo activo del usuario
-      const activeGroup = groupsData.find(group =>
-        group.status === 'Activo' &&
-        group.slots && group.slots.some(slot => 
-          slot.user && slot.user.albionNick === user?.albionNick
-        )
+  // Buscar grupo activo del usuario
+  React.useEffect(() => {
+    const activeGroup = groups.find(group =>
+      group.status === 'Activo' &&
+      group.slots && group.slots.some(slot => 
+        slot.user && slot.user.albionNick === user?.albionNick
       )
-      setUserActiveGroup(activeGroup)
-    } catch (error) {
-      console.error('Error loading groups:', error)
-    }
-  }
+    )
+    setUserActiveGroup(activeGroup)
+  }, [groups, user])
 
   // Función para buscar grupos según actividad y rol seleccionados
   const findGroupsByActivityAndRole = (activity, role) => {
@@ -75,7 +68,7 @@ const Dashboard = () => {
     try {
       await groupsService.removeMemberFromGroup(userActiveGroup._id, user.albionNick)
       showNotification('Te has salido del grupo exitosamente', 'success')
-      loadGroups() // Recargar grupos
+      // No recargar grupos, el socket lo hará
     } catch (error) {
       showNotification('Error al salirse del grupo', 'error')
     }
@@ -109,7 +102,7 @@ const Dashboard = () => {
           role: selectedRole // Aseguramos que el backend use el slot correcto
         })
         showNotification(`¡Te has unido a ${targetGroup.name} como ${selectedRole}!`, 'success')
-        await loadGroups(); // Recargar grupos
+        // No recargar grupos, el socket lo hará
         // Si el grupo quedó lleno, mostrar modal
         const updatedGroup = groups.find(g => g._id === targetGroup._id);
         if (updatedGroup && updatedGroup.slots.filter(s => s.user).length === updatedGroup.slots.length) {
@@ -205,7 +198,7 @@ const Dashboard = () => {
       setShowJoinModal(false);
       setSelectedActivity('');
       setSelectedRole('');
-      loadGroups();
+      // No recargar grupos, el socket lo hará
       navigate('/groups'); // Navegar a la página de grupos
     } catch (error) {
       showNotification('Error al crear grupo', 'error');

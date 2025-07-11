@@ -67,25 +67,9 @@ const UserSearchModal = ({
                     <div className="text-2xl">{user.avatar}</div>
                     <div>
                       <h3 className="text-white font-medium">{user.username}</h3>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <span className="text-blue-400">{user.role}</span>
-                        <span className="text-gray-400">•</span>
-                        <span className={`${getExperienceColor(user.experience)}`}>
-                          {user.experience}
-                        </span>
-                        <span className="text-gray-400">•</span>
-                        <span className="text-green-400">Lv.{user.level}</span>
-                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => onViewStats(user)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
-                      title="Ver estadísticas"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
                     <button
                       onClick={() => onSelectUser(user)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors"

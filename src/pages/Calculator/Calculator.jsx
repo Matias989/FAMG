@@ -4,6 +4,7 @@ import { Calculator as CalculatorIcon, Coins, Users, Settings, TrendingUp, Refre
 import UserSearchModal from '../../components/UserSearchModal'
 import UserStatsPanel from '../../components/UserStatsPanel'
 import UserProfile from '../../components/UserProfile'
+import { authService } from '../../services/authService'
 
 const Calculator = () => {
   const { showNotification } = useNotification()
@@ -31,174 +32,6 @@ const Calculator = () => {
   const [showUserProfile, setShowUserProfile] = useState(false)
   const [selectedUserForProfile, setSelectedUserForProfile] = useState(null)
 
-  // Usuarios simulados registrados
-  const registeredUsers = [
-    { 
-      id: 1, 
-      username: 'TankMaster', 
-      avatar: '🛡️', 
-      role: 'Tanque', 
-      level: 100, 
-      experience: 'Experto',
-      roles: [
-        { role: 'Tanque', weapon: 'Espada y Escudo' },
-        { role: 'Tanque', weapon: 'Martillo' }
-      ],
-      gathering: {
-        'Mineral': 'T8',
-        'Madera': 'T6',
-        'Fibra': 'T5'
-      }
-    },
-    { 
-      id: 2, 
-      username: 'HealPro', 
-      avatar: '💚', 
-      role: 'Sanador', 
-      level: 95, 
-      experience: 'Avanzado',
-      roles: [
-        { role: 'Sanador', weapon: 'Bastón Sagrado' },
-        { role: 'Sanador', weapon: 'Bastón de Naturaleza' }
-      ],
-      gathering: {
-        'Fibra': 'T7',
-        'Piedra': 'T5'
-      }
-    },
-    { 
-      id: 3, 
-      username: 'DPSKiller', 
-      avatar: '⚔️', 
-      role: 'DPS', 
-      level: 88, 
-      experience: 'Intermedio',
-      roles: [
-        { role: 'DPS Melee', weapon: 'Espada' },
-        { role: 'DPS Melee', weapon: 'Daga' }
-      ],
-      gathering: {
-        'Mineral': 'T6',
-        'Madera': 'T4'
-      }
-    },
-    { 
-      id: 4, 
-      username: 'RangedShot', 
-      avatar: '🏹', 
-      role: 'DPS Ranged', 
-      level: 92, 
-      experience: 'Avanzado',
-      roles: [
-        { role: 'DPS Ranged', weapon: 'Arco' },
-        { role: 'DPS Ranged', weapon: 'Ballesta' }
-      ],
-      gathering: {
-        'Madera': 'T7',
-        'Piel': 'T5'
-      }
-    },
-    { 
-      id: 5, 
-      username: 'SupportMage', 
-      avatar: '🔮', 
-      role: 'Soporte', 
-      level: 85, 
-      experience: 'Intermedio',
-      roles: [
-        { role: 'Soporte', weapon: 'Bastón Arcano' },
-        { role: 'Soporte', weapon: 'Bastón de Naturaleza' }
-      ],
-      gathering: {
-        'Fibra': 'T6',
-        'Piedra': 'T4'
-      }
-    },
-    { 
-      id: 6, 
-      username: 'Gatherer', 
-      avatar: '🌿', 
-      role: 'Recolector', 
-      level: 100, 
-      experience: 'Experto',
-      roles: [],
-      gathering: {
-        'Mineral': 'T8',
-        'Madera': 'T8',
-        'Fibra': 'T8',
-        'Piedra': 'T8',
-        'Piel': 'T8',
-        'Pescado': 'T7'
-      }
-    },
-    { 
-      id: 7, 
-      username: 'CraftMaster', 
-      avatar: '🔨', 
-      role: 'Crafteador', 
-      level: 98, 
-      experience: 'Experto',
-      roles: [],
-      gathering: {
-        'Mineral': 'T7',
-        'Madera': 'T7',
-        'Fibra': 'T7',
-        'Piedra': 'T7'
-      }
-    },
-    { 
-      id: 8, 
-      username: 'PvPWarrior', 
-      avatar: '⚔️', 
-      role: 'PvP', 
-      level: 90, 
-      experience: 'Avanzado',
-      roles: [
-        { role: 'DPS Melee', weapon: 'Espada' },
-        { role: 'DPS Melee', weapon: 'Daga' },
-        { role: 'DPS Ranged', weapon: 'Arco' }
-      ],
-      gathering: {
-        'Mineral': 'T5',
-        'Madera': 'T4'
-      }
-    },
-    { 
-      id: 9, 
-      username: 'DungeonRunner', 
-      avatar: '🛡️', 
-      role: 'PvE', 
-      level: 87, 
-      experience: 'Intermedio',
-      roles: [
-        { role: 'Tanque', weapon: 'Espada y Escudo' },
-        { role: 'DPS Melee', weapon: 'Espada' }
-      ],
-      gathering: {
-        'Mineral': 'T6',
-        'Madera': 'T5'
-      }
-    },
-    { 
-      id: 10, 
-      username: 'HCEElite', 
-      avatar: '🔥', 
-      role: 'HCE', 
-      level: 100, 
-      experience: 'Experto',
-      roles: [
-        { role: 'Tanque', weapon: 'Martillo' },
-        { role: 'Sanador', weapon: 'Bastón Sagrado' },
-        { role: 'DPS Melee', weapon: 'Espada' }
-      ],
-      gathering: {
-        'Mineral': 'T7',
-        'Madera': 'T6',
-        'Fibra': 'T6'
-      }
-    }
-  ]
-
   // Generar campos de miembros cuando cambie el modo o cantidad
   useEffect(() => {
     if (distributionMode === 'custom') {
@@ -216,14 +49,29 @@ const Calculator = () => {
   // Filtrar usuarios cuando cambie el término de búsqueda
   useEffect(() => {
     if (searchTerm.trim() === '') {
-      setFilteredUsers(registeredUsers)
+      setFilteredUsers([])
     } else {
-      const filtered = registeredUsers.filter(user =>
-        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.experience.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredUsers(filtered)
+      // Buscar usuarios en la base de datos real por nick
+      const fetchUsers = async () => {
+        try {
+          const users = await authService.searchUsers(searchTerm)
+          // Adaptar los campos para que sean compatibles con el modal
+          setFilteredUsers(users.map(user => ({
+            id: user.albionNick,
+            username: user.albionNick,
+            avatar: user.avatar || '👤',
+            role: user.roles && user.roles.length > 0 ? user.roles[0].role : '',
+            level: user.level || '',
+            experience: user.experience || '',
+            guild: user.guild,
+            alliance: user.alliance,
+            city: user.city
+          })))
+        } catch (error) {
+          setFilteredUsers([])
+        }
+      }
+      fetchUsers()
     }
   }, [searchTerm])
 
@@ -239,7 +87,7 @@ const Calculator = () => {
       newMembers.push({
         id: i,
         name: '',
-        participation: '',
+        participation: '100', // Por defecto 100%
         selectedUser: null
       })
     }
@@ -263,7 +111,7 @@ const Calculator = () => {
   const handleUserSearch = (memberIndex) => {
     setShowUserSearch(memberIndex)
     setSearchTerm('')
-    setFilteredUsers(registeredUsers)
+    setFilteredUsers([]) // Clear results when opening modal
   }
 
   const selectUser = (user, memberIndex) => {
@@ -301,9 +149,6 @@ const Calculator = () => {
 
   const handleSaveProfile = (updatedUser) => {
     // Actualizar el usuario en la lista
-    const updatedUsers = registeredUsers.map(user => 
-      user.id === updatedUser.id ? updatedUser : user
-    )
     // En una aplicación real, aquí se guardaría en la base de datos
     console.log('Usuario actualizado:', updatedUser)
     showNotification('Perfil actualizado correctamente', 'success')
@@ -349,11 +194,6 @@ const Calculator = () => {
         showNotification('Debe haber al menos un aporte mayor a 0', 'error')
         return false
       }
-
-      if (Math.abs(totalParticipation - 100) > 0.1) {
-        showNotification(`La participación total debe ser 100% (actual: ${totalParticipation.toFixed(1)}%)`, 'error')
-        return false
-      }
     }
 
     return true
@@ -380,17 +220,17 @@ const Calculator = () => {
         })
       }
     } else {
-      // Distribución proporcional
-      let totalAportes = 0
+      // Distribución proporcional según porcentaje de participación
+      let totalParticipacion = 0
       members.forEach(member => {
-        totalAportes += parseFloat(member.participation) || 0
+        totalParticipacion += parseFloat(member.participation) || 0
       })
 
       members.forEach(member => {
         const name = member.name.trim()
         const participation = parseFloat(member.participation) || 0
-        const amount = totalAportes > 0 ? (net * participation) / totalAportes : 0
-        
+        // Nueva fórmula: (net * participation) / totalParticipacion
+        const amount = totalParticipacion > 0 ? (net * participation) / totalParticipacion : 0
         newResults.push({
           name: name,
           participation: participation,
@@ -538,19 +378,7 @@ const Calculator = () => {
                   <Users size={24} className="text-gold-400" />
                   Participación por Integrante
                 </h3>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setShowUserStats(!showUserStats)}
-                    className="btn btn-secondary btn-sm"
-                    title="Ver estadísticas de usuarios"
-                  >
-                    <Info size={16} />
-                    {showUserStats ? 'Ocultar' : 'Mostrar'} Stats
-                  </button>
-                  <div className="text-sm text-dark-300">
-                    {getSelectedUsersCount()}/{members.length} usuarios seleccionados
-                  </div>
-                </div>
+                {/* Botón Mostrar Stats eliminado */}
               </div>
 
               {/* User Statistics */}
@@ -558,7 +386,7 @@ const Calculator = () => {
                 <div className="mb-6 p-4 bg-dark-700/30 rounded-lg border border-dark-600/50">
                   <h4 className="font-semibold mb-3 text-gold-400">Usuarios Registrados Disponibles</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {registeredUsers.map(user => (
+                    {filteredUsers.map(user => (
                       <div key={user.id} className="flex items-center gap-2 p-2 bg-dark-700/50 rounded-lg">
                         <span className="text-xl">{user.avatar}</span>
                         <div className="flex-1 min-w-0">
@@ -649,9 +477,7 @@ const Calculator = () => {
                                 <span className="text-2xl">{user.avatar}</span>
                                 <div className="flex-1">
                                   <div className="font-semibold">{user.username}</div>
-                                  <div className="text-sm text-dark-300">
-                                    {user.role} • Lv.{user.level} • {user.experience}
-                                  </div>
+                                  {/* Solo mostrar el nick, sin rol, nivel ni experiencia */}
                                 </div>
                                 <UserPlus size={16} className="text-gold-400" />
                               </button>

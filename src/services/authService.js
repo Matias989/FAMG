@@ -75,7 +75,7 @@ export const authService = {
   // Buscar usuarios por nick de Albion
   async searchUsers(searchTerm) {
     try {
-      const response = await api.get(`/auth/search?q=${encodeURIComponent(searchTerm)}`);
+      const response = await api.get(`/auth/users/search?q=${encodeURIComponent(searchTerm)}`);
       return response.data;
     } catch (error) {
       console.error('Error al buscar usuarios:', error);
