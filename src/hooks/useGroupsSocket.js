@@ -15,6 +15,7 @@ export const useGroupsSocket = () => {
     fetch(`${API_URL}/groups`)
       .then(res => res.json())
       .then(data => {
+        console.log('[Zustand] setGroups desde FETCH:', data);
         setGroups(data);
       });
 
@@ -25,7 +26,15 @@ export const useGroupsSocket = () => {
       forceNew: true
     });
 
+    socket.on('connect', () => {
+      console.log('[Socket] Conectado con ID:', socket.id);
+    });
+    socket.on('disconnect', (reason) => {
+      console.log('[Socket] Desconectado. Razón:', reason);
+    });
+
     socket.on('groups_init', (groups) => {
+      console.log('[Zustand] setGroups desde SOCKET groups_init:', groups);
       setGroups(groups);
     });
     socket.on('group_updated', (data) => {
