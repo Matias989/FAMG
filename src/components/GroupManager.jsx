@@ -3,6 +3,7 @@ import { X, Plus, Trash2, User, Users, Crown, UserPlus } from 'lucide-react';
 import UserSearchModal from './UserSearchModal';
 import { playNotificationSound } from '../utils/audioUtils';
 import { groupsService } from '../services/groupsService';
+import { useGroupsStore } from '../store/useGroupsStore';
 
 const ROLES = ['Tanque', 'Sanador', 'DPS', 'Soporte', 'Curador'];
 
@@ -15,55 +16,46 @@ const GroupManager = ({
   onGroupConflict,
   reloadGroups
 }) => {
-  // Estructura de slots: [{ role, user: null | userObj }]
-  const [slots, setSlots] = useState(() => {
-    // Inicializar slots desde group.slots o desde plantilla
-    if (group.slots && Array.isArray(group.slots)) return group.slots;
-    if (group.template && Array.isArray(group.template.roles)) {
-      return group.template.roles.map(role => ({ role, user: null }));
-    }
-    return [{ role: 'DPS', user: null }];
-  });
+  // Leer el grupo actualizado del store global
+  const groupFromStore = useGroupsStore(state => state.getGroupById(group?._id));
+  const groupToUse = groupFromStore || group;
+
+  // Determinar si el usuario actual es el creador
+  const isCreator = groupToUse.creatorNick && currentUser?.albionNick && groupToUse.creatorNick === currentUser.albionNick;
+
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [slotToAssign, setSlotToAssign] = useState(null); // index del slot a asignar usuario
   const [roleToAdd, setRoleToAdd] = useState(ROLES[0]);
 
-  // Determinar si el usuario actual es el creador
-  const isCreator = group.creatorNick && currentUser?.albionNick && group.creatorNick === currentUser.albionNick;
-
   // Agregar slot
   const handleAddSlot = () => {
-    setSlots([...slots, { role: roleToAdd, user: null }]);
+    const newSlots = [...(groupToUse.slots || []), { role: ROLES[0], user: null }];
+    onUpdateGroup({ ...groupToUse, slots: newSlots });
   };
 
   // Quitar slot (si tiene usuario, lo expulsa)
   const handleRemoveSlot = (index) => {
-    const slot = slots[index];
-    if (slot.user) {
-      // Expulsar usuario (puedes notificar si quieres)
-    }
-    setSlots(slots.filter((_, i) => i !== index));
+    const newSlots = (groupToUse.slots || []).filter((_, i) => i !== index);
+    onUpdateGroup({ ...groupToUse, slots: newSlots });
   };
 
   // Cambiar rol de slot
   const handleChangeRole = (index, newRole) => {
-    const updated = [...slots];
-    updated[index].role = newRole;
-    setSlots(updated);
+    const newSlots = [...(groupToUse.slots || [])];
+    newSlots[index].role = newRole;
+    onUpdateGroup({ ...groupToUse, slots: newSlots });
   };
 
   // Asignar usuario a slot (para cualquier usuario)
   const handleAssignSelf = async (slotIdx) => {
     try {
-      await groupsService.addMemberToGroup(group._id, { albionNick: currentUser.albionNick, username: currentUser.albionNick });
+      await groupsService.addMemberToGroup(groupToUse._id, { albionNick: currentUser.albionNick, username: currentUser.albionNick });
       if (reloadGroups) reloadGroups();
-      // Recargar grupo desde el backend (opcional: podrías llamar a reloadGroups si lo tienes como prop)
-      // Aquí podrías cerrar el modal o mostrar feedback
     } catch (error) {
       const backendMsg = error?.response?.data?.error || error.message;
       if (backendMsg.toLowerCase().includes('ya perteneces a otro grupo')) {
         const existingGroup = error?.response?.data?.existingGroup;
-        if (onGroupConflict && existingGroup) onGroupConflict('join', existingGroup, group);
+        if (onGroupConflict && existingGroup) onGroupConflict('join', existingGroup, groupToUse);
       } else {
         alert(backendMsg || 'No puedes unirte a este grupo.');
       }
@@ -72,9 +64,9 @@ const GroupManager = ({
 
   // Asignar usuario a slot
   const handleAssignUser = (index, user) => {
-    const updated = [...slots];
-    updated[index].user = user;
-    setSlots(updated);
+    const newSlots = [...(groupToUse.slots || [])];
+    newSlots[index].user = user;
+    onUpdateGroup({ ...groupToUse, slots: newSlots });
     setShowUserSearch(false);
     setSlotToAssign(null);
     playNotificationSound();
@@ -82,11 +74,11 @@ const GroupManager = ({
 
   // Expulsar usuario de slot
   const handleKickUser = async (index) => {
-    const slot = slots[index];
+    const slot = (groupToUse.slots || [])[index];
     // Si el usuario actual se auto-expulsa
     if (slot.user && currentUser && slot.user.albionNick === currentUser.albionNick && !isCreator) {
       try {
-        await groupsService.removeMemberFromGroup(group._id, currentUser.albionNick);
+        await groupsService.removeMemberFromGroup(groupToUse._id, currentUser.albionNick);
         if (reloadGroups) reloadGroups();
       } catch (error) {
         alert('Error al salir del grupo');
@@ -94,24 +86,24 @@ const GroupManager = ({
       return;
     }
     // Expulsión normal (solo para el creador)
-    const updated = [...slots];
-    updated[index].user = null;
-    setSlots(updated);
+    const newSlots = [...(groupToUse.slots || [])];
+    newSlots[index].user = null;
+    onUpdateGroup({ ...groupToUse, slots: newSlots });
     if (reloadGroups) reloadGroups();
   };
 
   // El creador puede cambiarse de slot
   const handleMoveCreator = (fromIndex, toIndex) => {
-    const updated = [...slots];
-    const creatorSlot = updated[fromIndex];
-    updated[fromIndex].user = null;
-    updated[toIndex].user = currentUser;
-    setSlots(updated);
+    const newSlots = [...(groupToUse.slots || [])];
+    const creatorSlot = newSlots[fromIndex];
+    newSlots[fromIndex].user = null;
+    newSlots[toIndex].user = currentUser;
+    onUpdateGroup({ ...groupToUse, slots: newSlots });
   };
 
-  // Guardar cambios en el grupo
+  // Guardar cambios en el grupo (opcional, si quieres un botón de guardar)
   const handleSave = () => {
-    onUpdateGroup({ ...group, slots });
+    onUpdateGroup({ ...groupToUse, slots: groupToUse.slots });
   };
 
   return (
@@ -135,7 +127,7 @@ const GroupManager = ({
         <div className="p-6">
           <h3 className="text-lg font-semibold text-white mb-3">Slots del Grupo</h3>
           <div className="grid gap-3 mb-6">
-            {slots.map((slot, idx) => (
+            {(groupToUse.slots || []).map((slot, idx) => (
               <div key={idx} className="flex items-center justify-between bg-gray-800 rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <select
@@ -200,37 +192,25 @@ const GroupManager = ({
                 </div>
               </div>
             ))}
-          </div>
-          {isCreator && (
-            <div className="flex items-center gap-2 mb-6">
-              <select
-                value={roleToAdd}
-                onChange={e => setRoleToAdd(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
-              >
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <button
+            {/* Slot especial para agregar slot */}
+            {isCreator && (
+              <div
+                className="flex items-center justify-center border-2 border-dashed border-blue-400 rounded-lg p-4 cursor-pointer hover:bg-blue-900/20 transition-colors min-h-[56px]"
+                style={{ minHeight: '56px' }}
                 onClick={handleAddSlot}
-                className="p-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center"
-                title="Agregar Slot"
+                title="Agregar slot"
               >
-                <Plus className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleSave}
-                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-              >
-                Guardar Cambios
-              </button>
-            </div>
-          )}
+                <Plus className="w-8 h-8 text-blue-400" />
+              </div>
+            )}
+          </div>
+          {/* Eliminar select y botón de agregar slot y el botón Guardar Cambios */}
         </div>
 
         {/* User Search Modal para asignar usuario a slot */}
         {showUserSearch && (
           <UserSearchModal
-            users={registeredUsers.filter(u => !slots.some(s => s.user && s.user.id === u.id))}
+            users={registeredUsers.filter(u => !groupToUse.slots?.some(s => s.user && s.user.id === u.id))}
             searchTerm={''}
             onSearchChange={() => {}}
             onSelectUser={user => handleAssignUser(slotToAssign, user)}

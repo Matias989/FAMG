@@ -1,19 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Calendar, MapPin, Clock, Crown, Settings, UserPlus, Eye } from 'lucide-react';
 import GroupManager from './GroupManager';
 import { useAuth } from '../contexts/AuthContext';
 import { groupsService } from '../services/groupsService';
+import { useGroupsStore } from '../store/useGroupsStore';
 
-const GroupsList = ({ groups, onUpdateGroup, onDeleteGroup, registeredUsers, reloadGroups, onBackToList, onGroupConflict }) => {
+// Eliminar React.memo y arePropsEqual
+// Componente para mostrar la lista de grupos
+const GroupsList = ({ onUpdateGroup, onDeleteGroup, registeredUsers, reloadGroups, onBackToList, onGroupConflict }) => {
   const { user } = useAuth();
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const groups = useGroupsStore(state => state.groups);
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [activeGroup, setActiveGroup] = useState(null);
   const [groupAction, setGroupAction] = useState(null); // 'join' o 'create'
+  const modalOpenedManually = useRef(false); // Ref para rastrear si el modal fue abierto manualmente
+  // Ref para saber si el usuario estaba en el grupo al abrir el modal
+  const userWasInGroup = useRef(false);
+
+  // Siempre busca el grupo actualizado por ID
+  const selectedGroup = useGroupsStore(state => state.getGroupById(selectedGroupId));
 
   const handleManageGroup = (group) => {
-    setSelectedGroup(group);
+    setSelectedGroupId(group._id);
     setShowGroupManager(true);
+    modalOpenedManually.current = true; // Marcar como abierto manualmente
+    // Guardar si el usuario estaba en el grupo al abrir el modal
+    userWasInGroup.current = group.slots && group.slots.some(slot => slot.user && slot.user.albionNick === user?.albionNick);
   };
 
   const handleUpdateGroup = (updatedGroup) => {
@@ -97,25 +110,42 @@ const GroupsList = ({ groups, onUpdateGroup, onDeleteGroup, registeredUsers, rel
 
   // Mantener actualizado el grupo seleccionado tras polling
   useEffect(() => {
-    if (showGroupManager && selectedGroup && groups.length > 0) {
-      const updated = groups.find(g => g._id === selectedGroup._id);
-      if (updated) {
-        setSelectedGroup(updated);
-        // Si el usuario ya no está en ningún slot, cerrar el modal
-        const userInGroup = updated.slots && updated.slots.some(slot => slot.user && slot.user.albionNick === user.albionNick);
-        if (!userInGroup) {
-          setShowGroupManager(false);
-          setSelectedGroup(null);
-        }
-      } else {
-        // Si el grupo fue eliminado, cerrar el modal
+    if (showGroupManager && selectedGroupId) {
+      const updated = groups.find(g => g._id === selectedGroupId);
+      if (!updated) {
+        // Si el grupo fue eliminado, cerrar el modal inmediatamente
         setShowGroupManager(false);
-        setSelectedGroup(null);
+        setSelectedGroupId(null);
+        modalOpenedManually.current = false;
+        return;
+      }
+      const userInGroup = updated.slots && updated.slots.some(
+        slot => slot.user && slot.user.albionNick === user?.albionNick
+      );
+      // Solo cerrar el modal si el usuario estaba en el grupo y salió
+      if (userWasInGroup.current && !userInGroup) {
+        setShowGroupManager(false);
+        setSelectedGroupId(null);
+        modalOpenedManually.current = false;
       }
     }
-  }, [groups]);
+  }, [groups, showGroupManager, selectedGroupId, user?.albionNick]);
 
-  if (groups.length === 0) {
+  // Ordenar grupos: primero el grupo donde el usuario está activo
+  const userActiveGroupIndex = groups.findIndex(
+    group =>
+      group.status === 'Activo' &&
+      group.slots &&
+      group.slots.some(slot => slot.user && slot.user.albionNick === user.albionNick)
+  );
+  let orderedGroups = [...groups];
+  if (userActiveGroupIndex > 0) {
+    const [activeGroup] = orderedGroups.splice(userActiveGroupIndex, 1);
+    orderedGroups.unshift(activeGroup);
+  }
+
+  // Verificar que groups sea un array
+  if (!Array.isArray(orderedGroups) || orderedGroups.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">📋</div>
@@ -127,8 +157,15 @@ const GroupsList = ({ groups, onUpdateGroup, onDeleteGroup, registeredUsers, rel
 
   return (
     <>
+      {/* Indicador sutil de actualización */}
+      <div className="mb-4 text-right">
+        <span className="text-xs text-gray-500">
+          {orderedGroups.length} grupo{orderedGroups.length !== 1 ? 's' : ''} disponible{orderedGroups.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      
       <div className="space-y-6">
-        {groups.map((group) => {
+        {Array.isArray(orderedGroups) && orderedGroups.map((group) => {
           const isUserActiveGroup = group.status === 'Activo' && group.slots && group.slots.some(slot => slot.user && slot.user.albionNick === user.albionNick);
           return (
             <div
@@ -197,7 +234,7 @@ const GroupsList = ({ groups, onUpdateGroup, onDeleteGroup, registeredUsers, rel
                         className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                       >
                         <UserPlus className="w-4 h-4" />
-                        <span>Gestionar</span>
+                        <span>{group.creatorNick === user.albionNick ? 'Gestionar' : 'Ver/Unirse'}</span>
                       </button>
                       {/* Botón Eliminar solo para el creador */}
                       {group.creatorNick === user.albionNick && (
@@ -246,7 +283,8 @@ const GroupsList = ({ groups, onUpdateGroup, onDeleteGroup, registeredUsers, rel
             onUpdateGroup={handleUpdateGroup}
             onClose={() => {
               setShowGroupManager(false);
-              setSelectedGroup(null);
+              setSelectedGroupId(null);
+              modalOpenedManually.current = false; // Resetear el flag
               if (onBackToList) onBackToList();
             }}
             registeredUsers={registeredUsers}

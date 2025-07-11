@@ -4,22 +4,33 @@ import GroupsList from '../../components/GroupsList';
 import CreateGroup from '../../components/CreateGroup';
 import GroupCompletionNotification from '../../components/GroupCompletionNotification';
 import SoundSettings from '../../components/SoundSettings';
-import useGroupCompletion from '../../hooks/useGroupCompletion';
+import useGroupCompletion, { useGroupsPolling } from '../../hooks/useGroupCompletion';
 import { groupsService } from '../../services/groupsService';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGroupsStore } from '../../store/useGroupsStore';
+import { useGroupsSocket } from '../../hooks/useGroupsSocket';
 
 const Groups = () => {
+  useGroupsSocket(); // Activa la suscripción global
+
+  const groups = useGroupsStore(state => state.groups);
+  const loading = useGroupsStore(state => state.loading);
+  const lastUpdate = useGroupsStore(state => state.lastUpdate);
+  const loadGroups = useGroupsStore(state => state.loadGroups);
+
+  // Cargar grupos al montar el componente
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
+
   const { user } = useAuth();
   const { showNotification } = useNotification();
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showSoundSettings, setShowSoundSettings] = useState(false);
   const [showGroupConflict, setShowGroupConflict] = useState(false);
   const [activeGroup, setActiveGroup] = useState(null);
   const [wantedGroup, setWantedGroup] = useState(null);
-  const pollingIntervalId = useRef(null);
 
   // Hook para detectar grupos completados
   const {
@@ -29,58 +40,13 @@ const Groups = () => {
     closeNotification
   } = useGroupCompletion(groups, user);
 
-  // Cargar grupos al montar el componente y con polling
-  useEffect(() => {
-    loadGroups();
-  }, []);
-
-  // Polling solo si el usuario pertenece a un grupo activo
-  useEffect(() => {
-    // Buscar si el usuario está en algún slot de algún grupo activo
-    const userInActiveGroup = groups.some(group =>
-      group.status === 'Activo' &&
-      group.slots && group.slots.some(slot => slot.user && slot.user.albionNick === user.albionNick)
-    );
-    if (userInActiveGroup && !pollingIntervalId.current) {
-      pollingIntervalId.current = setInterval(() => {
-        loadGroups();
-      }, 30000);
-    } else if (!userInActiveGroup && pollingIntervalId.current) {
-      clearInterval(pollingIntervalId.current);
-      pollingIntervalId.current = null;
-    }
-    return () => {
-      if (pollingIntervalId.current) {
-        clearInterval(pollingIntervalId.current);
-        pollingIntervalId.current = null;
-      }
-    };
-  }, [groups, user]);
-
-  // Función para detener el polling (solo para este usuario)
-  const stopPolling = () => {
-    if (pollingIntervalId.current) {
-      clearInterval(pollingIntervalId.current);
-      pollingIntervalId.current = null;
-    }
-  };
-
-  // Función para reiniciar el polling (por ejemplo, al volver a la lista de grupos)
-  const startPolling = () => {
-    if (!pollingIntervalId.current) {
-      pollingIntervalId.current = setInterval(() => {
-        loadGroups();
-      }, 30000);
-    }
-  };
-
   // Al cerrar o aceptar el modal de grupo completo, detener el polling
   const handleGroupModalClose = () => {
-    stopPolling();
+    // No hay pollingIntervalId.current, ya que el hook lo maneja internamente
     closeNotification();
   };
   const handleGroupModalDismiss = () => {
-    stopPolling();
+    // No hay pollingIntervalId.current, ya que el hook lo maneja internamente
     dismissNotification();
   };
 
@@ -91,35 +57,12 @@ const Groups = () => {
     setWantedGroup(wantedGroupParam);
   };
 
-  const loadGroups = async () => {
-    try {
-      setLoading(true);
-      const groupsData = await groupsService.getGroups();
-      // Ordenar: primero el grupo donde el usuario está activo
-      const userActiveGroupIndex = groupsData.findIndex(group =>
-        group.status === 'Activo' &&
-        group.slots && group.slots.some(slot => slot.user && slot.user.albionNick === user.albionNick)
-      );
-      let orderedGroups = [...groupsData];
-      if (userActiveGroupIndex > 0) {
-        const [activeGroup] = orderedGroups.splice(userActiveGroupIndex, 1);
-        orderedGroups.unshift(activeGroup);
-      }
-      setGroups(orderedGroups);
-    } catch (error) {
-      showNotification('Error al cargar grupos', 'error');
-      console.error('Error loading groups:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateGroup = async (newGroup) => {
     try {
-      const createdGroup = await groupsService.createGroup(newGroup);
-      setGroups(prev => [createdGroup, ...prev]);
+      await groupsService.createGroup(newGroup);
       showNotification('Grupo creado exitosamente', 'success');
       setShowCreateGroup(false);
+      // No recargar grupos aquí, el socket lo hará
     } catch (error) {
       // Manejar error personalizado del backend
       const backendMsg = error?.response?.data?.error || error.message;
@@ -150,24 +93,21 @@ const Groups = () => {
       try {
         await groupsService.addMemberToGroup(wantedGroup._id, { albionNick: user.albionNick, username: user.albionNick });
         setWantedGroup(null);
-        loadGroups();
+        // No recargar grupos aquí, el socket lo hará
       } catch (error) {
         showNotification('Error al unirse al nuevo grupo', 'error');
         setWantedGroup(null);
       }
     } else {
-      // Recargar grupos
-      loadGroups();
+      // No recargar grupos aquí, el socket lo hará
     }
   };
 
   const handleUpdateGroup = async (updatedGroup) => {
     try {
-      const updated = await groupsService.updateGroup(updatedGroup._id, updatedGroup);
-      setGroups(prev => prev.map(group => 
-        group._id === updated._id ? updated : group
-      ));
+      await groupsService.updateGroup(updatedGroup._id, updatedGroup);
       showNotification('Grupo actualizado exitosamente', 'success');
+      // No recargar grupos aquí, el socket lo hará
     } catch (error) {
       showNotification('Error al actualizar grupo', 'error');
     }
@@ -177,8 +117,8 @@ const Groups = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este grupo?')) {
       try {
         await groupsService.deleteGroup(groupId);
-        setGroups(prev => prev.filter(group => group._id !== groupId));
         showNotification('Grupo eliminado exitosamente', 'success');
+        // No recargar grupos aquí, el socket lo hará
       } catch (error) {
         showNotification('Error al eliminar grupo', 'error');
       }
@@ -377,6 +317,30 @@ const Groups = () => {
               Grupos continuos donde los miembros pueden unirse en cualquier momento. 
               Usa plantillas para organizar actividades.
             </p>
+            {/* Indicador de estado del polling */}
+            <div className="flex items-center space-x-2 mt-1">
+              {lastUpdate && (
+                <p className="text-sm text-gray-500">
+                  Última actualización: {new Date(lastUpdate).toLocaleTimeString('es-ES')}
+                </p>
+              )}
+              {loading && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-400">Actualizando...</span>
+                </div>
+              )}
+              <button 
+                onClick={() => {
+                  console.log('🔄 Forzando actualización manual...');
+                  loadGroups();
+                }}
+                className="text-xs text-gray-400 hover:text-blue-400 transition-colors"
+                title="Forzar actualización"
+              >
+                🔄 Actualizar
+              </button>
+            </div>
           </div>
           <div className="flex items-center space-x-3">
             <button 
@@ -397,12 +361,11 @@ const Groups = () => {
         </div>
 
         <GroupsList
-          groups={groups}
           onUpdateGroup={handleUpdateGroup}
           onDeleteGroup={handleDeleteGroup}
           registeredUsers={registeredUsers}
           reloadGroups={loadGroups}
-          onBackToList={startPolling}
+          onBackToList={loadGroups} // Usar loadGroups directamente
           onGroupConflict={handleGroupConflict} // <-- Pasar función al hijo
         />
 
