@@ -34,8 +34,10 @@ export const useGroupsSocket = () => {
     });
 
     socket.on('groups_init', (groups) => {
-      console.log('[Zustand] setGroups desde SOCKET groups_init:', groups);
-      setGroups(groups);
+      // Soporta ambos formatos: array directo o { groups: [...] }
+      const groupList = Array.isArray(groups) ? groups : groups.groups;
+      console.log('[Zustand] setGroups desde SOCKET groups_init:', groupList);
+      setGroups(groupList);
     });
     socket.on('group_updated', (data) => {
       const group = data.group || data; // Soporta ambos formatos
